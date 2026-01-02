@@ -358,6 +358,8 @@ router.post("/order/create/direct", async (req, res) => {
     for (const item of products) {
       const { sku, quantity } = item;
 
+      if (sku === "GIFT-WRAP") continue;
+
       // only decrement if enough stock exists
       const result = await Product.updateOne(
         {
