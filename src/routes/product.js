@@ -83,57 +83,18 @@ router.get("/products/get-related/:category", async (req, res) => {
   }
 });
 
-const esc = (s = "") =>
-  String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-
-router.get("/p/:slug", async (req, res) => {
+router.get("/products/search/:query", async (req, res) => {
   try {
-    const { slug } = req.params;
-
-    const product = await Product.findOne({ slug });
-    if (!product) return res.status(404).send("Not found");
-
-    const title = `${product.title} | Retro Revive BD`;
-    const desc = (product.description || "").slice(0, 155);
-
-    // Must be absolute public URL
-    const image =
-      product.img ||
-      (Array.isArray(product.gallery) ? product.gallery[0] : "") ||
-      "https://retrorevivebd.com/logo.png";
-
-    const realUrl = `https://retrorevivebd.com/product/${slug}`;
-
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.setHeader("Cache-Control", "public, max-age=300");
-
-    res.send(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>${esc(title)}</title>
-  <meta name="description" content="${esc(desc)}" />
-
-  <meta property="og:title" content="${esc(title)}" />
-  <meta property="og:description" content="${esc(desc)}" />
-  <meta property="og:image" content="${esc(image)}" />
-  <meta property="og:url" content="${esc(realUrl)}" />
-  <meta property="og:type" content="product" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:image" content="${esc(image)}" />
-
-  <meta http-equiv="refresh" content="0; url=${esc(realUrl)}" />
-</head>
-<body>Redirecting…</body>
-</html>`);
+    const { query } = req.params;
+    const products = await Product.find({
+      $or: [
+        { title: { $regex: query, $options: "i" } },
+        { sku: { $regex: query, $options: "i" } },
+      ],
+    }).limit(20);
+    return res.status(200).json(products);
   } catch (error) {
-    res.status(500).send("Error generating preview");
+    return res.status(500).json({ error: error.message });
   }
 });
 

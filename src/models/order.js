@@ -52,10 +52,20 @@ const OrderSchema = new mongoose.Schema(
       type: String,
     },
 
+    note: {
+      type: String,
+    },
+
+    gift_wrap: {
+      type: Boolean,
+      default: false,
+    },
+
     products: [
       {
         pid: { type: String },
         sku: { type: String },
+        variant: { type: String },
         title: { type: String },
         img: { type: String },
         quantity: { type: Number },

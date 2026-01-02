@@ -365,8 +365,9 @@ async function sendOrderConfirmationEmail(order, email) {
                           </td>
                         </tr>
 
-                        ${order.products.map(
-                          (product) => `<tr>
+                        ${order.products
+                          .map(
+                            (product) => `<tr>
                           <td
                             style="padding: 12px; border-top: 1px solid #eadfd2"
                           >
@@ -405,8 +406,8 @@ async function sendOrderConfirmationEmail(order, email) {
                                 "
                               >
                                 SKU: ${product.sku} (${
-                            product.variant || "N/A"
-                          })
+                              product.variant || "N/A"
+                            })
                               </div>
                             </div>
                           </td>
@@ -434,7 +435,8 @@ async function sendOrderConfirmationEmail(order, email) {
                             ৳${product.price * product.quantity}
                           </td>
                         </tr>`
-                        )}
+                          )
+                          .join("")}
                       </table>
                     </td>
                   </tr>

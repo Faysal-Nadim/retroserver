@@ -245,32 +245,87 @@ router.post("/order/create", async (req, res) => {
     item_type,
     item_quantity,
     item_weight,
-    amount_to_collect,
     item_description,
+    products, // [{ sku, quantity, ... }]
+    order_total,
+    trxid,
     payment_status,
+    amount_paid,
+    delivery_charge,
+    email,
+    gift_wrap,
+    amount_to_collect,
   } = req.body;
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
+    // 1) Reduce stock for each ordered sku (variant sku)
+    for (const item of products) {
+      const { sku, quantity } = item;
+
+      if (sku === "GIFT-WRAP") continue;
+
+      // only decrement if enough stock exists
+      const result = await Product.updateOne(
+        {
+          variants: { $elemMatch: { sku, stock: { $gte: quantity } } },
+        },
+        {
+          $inc: { "variants.$.stock": -quantity },
+        },
+        { session }
+      );
+
+      if (result.modifiedCount === 0) {
+        throw new Error(`Not enough stock for SKU: ${sku}`);
+      }
+    }
+
+    // 2) Create the order
     const newOrder = new Order({
       merchant_order_id: `#${getYYMMDD()}${merchant_order_id}`,
-      recipient_name: recipient_name,
-      recipient_phone: recipient_phone,
-      recipient_address: recipient_address,
-      delivery_type: delivery_type,
-      item_type: item_type,
-      item_quantity: item_quantity,
-      item_weight: item_weight,
-      amount_to_collect: amount_to_collect,
-      item_description: item_description,
-      payment_status: payment_status,
+      recipient_name,
+      recipient_phone,
+      recipient_address,
+      delivery_type,
+      item_type,
+      item_quantity,
+      item_weight,
+      amount_to_collect,
+      item_description,
+      products,
+      order_total,
+      trxid,
+      payment_status,
+      delivery_charge,
+      amount_paid,
+      email,
+      note: req.body.note || "",
+      gift_wrap,
     });
 
-    const savedOrder = await newOrder.save();
+    const savedOrder = await newOrder.save({ session });
+
+    // 3) Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    // Send email AFTER commit (so you don't email a failed order)
+    if (email) {
+      await sendOrderConfirmationEmail(savedOrder, email);
+    }
+
     return res.status(201).json(savedOrder);
   } catch (error) {
-    return res
-      .status(404)
-      .json({ error: "Failed to create order", error: error.message });
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.status(400).json({
+      error: "Failed to create order",
+      message: error.message,
+    });
   }
 });
 
@@ -292,6 +347,7 @@ router.post("/order/create/direct", async (req, res) => {
     amount_paid,
     delivery_charge,
     email,
+    gift_wrap,
   } = req.body;
 
   const session = await mongoose.startSession();
@@ -337,6 +393,8 @@ router.post("/order/create/direct", async (req, res) => {
       delivery_charge,
       amount_paid,
       email,
+      note: req.body.note || "",
+      gift_wrap,
     });
 
     const savedOrder = await newOrder.save({ session });

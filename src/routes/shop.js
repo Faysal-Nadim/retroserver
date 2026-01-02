@@ -34,7 +34,7 @@ router.get("/p/:slug", async (req, res) => {
     const product = await Product.findOne({ slug });
     if (!product) return res.status(404).send("Not found");
 
-    const title = `${product.title} | Retro Revive BD`;
+    const title = `${product.title} | Retro Revive`;
 
     // if description has HTML, you should strip tags; for now keep simple:
     const desc = String(product.description || "")
@@ -73,7 +73,7 @@ router.get("/p/:slug", async (req, res) => {
   <meta property="og:image:secure_url" content="${esc(image)}" />
   <meta property="og:url" content="${esc(shareUrl)}" />
   <meta property="og:type" content="product" />
-  <meta property="og:site_name" content="Retro Revive BD" />
+  <meta property="og:site_name" content="Retro Revive" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${esc(title)}" />
